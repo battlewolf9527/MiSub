@@ -151,11 +151,16 @@ function convertClashProxyToUrl(proxy) {
         if (type === 'hysteria2') {
             const params = [];
             const password = proxy.password || proxy.auth || '';
-            if (password) params.push(`obfs-password=${encodeURIComponent(password)}`);
-            if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
-            if (proxy.skipCertVerify) params.push('insecure=1');
 
-            return `hysteria2://${password}@${server}:${port}?${params.join('&')}#${encodeURIComponent(name)}`;
+            // 混淆参数：仅在配置了 obfs 时传递（与认证密码无关）
+            if (proxy.obfs) params.push(`obfs=${encodeURIComponent(proxy.obfs)}`);
+            if (proxy['obfs-password']) params.push(`obfs-password=${encodeURIComponent(proxy['obfs-password'])}`);
+
+            if (proxy.sni) params.push(`sni=${encodeURIComponent(proxy.sni)}`);
+            if (proxy.skipCertVerify || proxy['skip-cert-verify']) params.push('insecure=1');
+
+            const query = params.length > 0 ? `?${params.join('&')}` : '';
+            return `hysteria2://${encodeURIComponent(password)}@${server}:${port}${query}#${encodeURIComponent(name)}`;
         }
 
         if (type === 'socks5') {
@@ -286,7 +291,7 @@ function parseSurgeOrQxLine(line) {
     if (!line || line.startsWith('#') || line.startsWith(';')) return null;
 
     // Surge 格式: "name = protocol, server, port, key=value, ..."
-    let match = line.match(/^([^=]+)=(shadowsocks|ss|ssr|vmess|vless|trojan|hysteria2?|hy2|hysteria|tuic|snell|socks5|http|https),\s*([^,]+),\s*(\d+)(.*)$/i);
+    let match = line.match(/^([^=]+)=(shadowsocks|ss|ssr|vmess|vless|trojan|hysteria2?|hy2|hysteria|tuic|snell|anytls|socks5|http|https),\s*([^,]+),\s*(\d+)(.*)$/i);
     if (match) {
         const proxy = {
             name: match[1].trim(),
@@ -323,7 +328,7 @@ function parseSurgeOrQxLine(line) {
     }
 
     // QX 格式: "protocol=server:port, key=value, ..., tag=name"
-    match = line.match(/^(shadowsocks|ss|ssr|vmess|vless|trojan|hysteria2?|hy2|hysteria|tuic|snell|socks5|http|https)=([^,:]+):(\d+)(.*)$/i);
+    match = line.match(/^(shadowsocks|ss|ssr|vmess|vless|trojan|hysteria2?|hy2|hysteria|tuic|snell|anytls|socks5|http|https)=([^,:]+):(\d+)(.*)$/i);
     if (match) {
         const proxy = {
             name: 'Untitled',
